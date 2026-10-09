@@ -30,9 +30,7 @@
 
   type FlatNodeEntry = { group: ComfyGridGroup; node: ComfyGridNode };
 
-  const commonTabBoard = $derived(
-    (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
-  );
+  const commonTabBoard = $derived(workspaceState.layout.commonTabBoard);
 
   const groups = $derived.by(() => {
     let filteredGroups: ReadonlyArray<ComfyGridGroup>;

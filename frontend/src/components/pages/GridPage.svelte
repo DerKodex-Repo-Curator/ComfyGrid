@@ -132,6 +132,24 @@
                       <input
                         type="checkbox"
                         class="btn-check"
+                        id="toggle-common-tab-board"
+                        name="toggle_common_tab_board"
+                        onchange={handleOptionChanged}
+                        bind:checked={workspaceState.layout.commonTabBoard}
+                      />
+                      <label
+                        class="dropdown-item"
+                        class:active={workspaceState.layout.commonTabBoard}
+                        for="toggle-common-tab-board"
+                      >
+                        {$t('group.toggle_common_tab_board.label')}
+                      </label>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <input
+                        type="checkbox"
+                        class="btn-check"
                         id="toggle-note-nodes"
                         name="toggle_note_nodes"
                         onchange={handleOptionChanged}

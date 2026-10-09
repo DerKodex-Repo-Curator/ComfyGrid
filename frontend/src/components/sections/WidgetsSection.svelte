@@ -22,9 +22,7 @@
     }
   });
 
-  const commonTabBoard = $derived(
-    (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false,
-  );
+  const commonTabBoard = $derived(workspaceState.layout.commonTabBoard);
   const effectiveGroupId = $derived(commonTabBoard ? undefined : group?.id);
   const showBoard = $derived(
     (!commonTabBoard || !group) && workspaceState.hasEffectiveNodes('Tab', effectiveGroupId),

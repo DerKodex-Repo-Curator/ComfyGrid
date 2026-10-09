@@ -53,6 +53,7 @@ function makeEptyLayout(graph_id: string): LayoutType {
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
+        commonTabBoard: false,
         sortOrder: 'default',
     };
 }
@@ -95,6 +96,7 @@ export function loadLayout(graphId: string): LayoutType {
         showControlLessNodes: false,
         showCollapsedNodes: false,
         showNoteNodes: false,
+        commonTabBoard: false,
         sortOrder: 'default',
     };
 }

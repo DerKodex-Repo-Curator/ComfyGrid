@@ -21,10 +21,6 @@ type = "dropdown"
 choices = ["none", "all_top_groups"]
 default = "all_top_groups"
 
-[ComfyGrid.ui.common_tab_board]
-type = "checkbox"
-default = true
-
 [ComfyGrid.ui.always_show_node_focus_button]
 type = "checkbox"
 default = false
@@ -208,4 +204,3 @@ default = "score_9, score_8_up, score_8, score_7_up, score_7, score_6_up, score_
 [ComfyGrid.prompt_pilot.always_space_tags]
 type = "textarea"
 default = ""
-

@@ -22,5 +22,6 @@ export type LayoutType = {
     showControlLessNodes?: boolean;
     showCollapsedNodes?: boolean;
     showNoteNodes?: boolean;
+    commonTabBoard?: boolean;
     sortOrder: 'default' | 'name';
 };

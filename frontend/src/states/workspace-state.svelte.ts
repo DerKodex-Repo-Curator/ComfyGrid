@@ -21,6 +21,7 @@ export class Layout {
     #showControlLessNodes = $state<boolean>(false);
     #showCollapsedNodes = $state<boolean>(false);
     #showNoteNodes = $state<boolean>(false);
+    #commonTabBoard = $state<boolean>(false);
     #sortOrder = $state<'default' | 'name'>('default');
 
     get graphId() {
@@ -84,6 +85,9 @@ export class Layout {
     }
     get showNoteNodes() {
         return this.#showNoteNodes;
+    }
+    get commonTabBoard() {
+        return this.#commonTabBoard;
     }
     get sortOrder() {
         return this.#sortOrder;
@@ -153,6 +157,9 @@ export class Layout {
     }
     set showNoteNodes(val: boolean) {
         this.#showNoteNodes = val;
+    }
+    set commonTabBoard(val: boolean) {
+        this.#commonTabBoard = val;
     }
     set sortOrder(sortOrder: 'default' | 'name') {
         this.#sortOrder = sortOrder;
@@ -236,6 +243,7 @@ export class Layout {
             showControlLessNodes: this.#showControlLessNodes,
             showCollapsedNodes: this.#showCollapsedNodes,
             showNoteNodes: this.#showNoteNodes,
+            commonTabBoard: this.#commonTabBoard,
             sortOrder: this.#sortOrder,
         };
         logger.trace('[LAYOUT_LOG] Layout.export result:', exported);
@@ -293,6 +301,7 @@ export class Layout {
             this.#showCollapsedNodes = false;
         }
         this.#showNoteNodes = layout.showNoteNodes ?? false;
+        this.#commonTabBoard = layout.commonTabBoard ?? false;
         this.#sortOrder = layout.sortOrder ?? 'default';
     }
 }
@@ -400,7 +409,7 @@ class WorkspaceState {
     }
 
     getEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): ComfyGridNode[] {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
         const nodeGroupMap = this.nodeGroupMap;
 
@@ -455,7 +464,7 @@ class WorkspaceState {
         if (boardTarget !== 'Tab') {
             return false;
         }
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
         for (const [widgetId, targetBoard] of this.#layout.floatingWidgets) {
             if (targetBoard !== 'Tab') {
                 continue;
@@ -478,7 +487,7 @@ class WorkspaceState {
     }
 
     hasTabContent(tabId: string): boolean {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
         if (tabId === '__ungrouped__') {
             const hasDefaultNodes = this.getEffectiveNodes('default').length > 0;
@@ -501,7 +510,7 @@ class WorkspaceState {
     }
 
     getTabNodes(tabId: string): ComfyGridNode[] {
-        const commonTabBoard = (appState.optionState.get('ComfyGrid.ui.common_tab_board') as boolean) ?? false;
+        const commonTabBoard = this.#layout.commonTabBoard;
 
         if (tabId === '__ungrouped__') {
             const nodes = [...this.getEffectiveNodes('default')];

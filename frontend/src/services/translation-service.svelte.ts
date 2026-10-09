@@ -49,9 +49,11 @@ class TranslationManager {
     }
 
     async waitForAllTranslations(): Promise<void> {
-        await this.translateAllPending();
-        while (this.#activePromises.size > 0) {
-            await Promise.all(Array.from(this.#activePromises));
+        while (this.hasPendingTasks || this.#activePromises.size > 0) {
+            await this.translateAllPending();
+            if (this.#activePromises.size > 0) {
+                await Promise.all(Array.from(this.#activePromises));
+            }
         }
     }
 }

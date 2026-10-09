@@ -132,6 +132,14 @@
     }
   }
 
+  function invalidateActiveTranslation() {
+    translationRequestId++;
+    activeTranslationText = '';
+    activeTranslationPromise = null;
+    widget.isTranslating = false;
+    widget.translationFailed = false;
+  }
+
   function handleManualTranslate() {
     const raw = widget.rawValue;
     const val = widget.value;
@@ -144,6 +152,7 @@
 
   function handleInput() {
     if (isTranslate) {
+      invalidateActiveTranslation();
       widget.isDirty = true;
       registerOrUnregisterPending();
     } else {

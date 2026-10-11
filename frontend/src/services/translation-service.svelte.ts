@@ -35,11 +35,15 @@ class TranslationManager {
         return this.#cancelController.signal;
     }
 
-    cancelAll() {
+    cancelPendingQueues() {
         this.#cancelController.abort();
         this.#cancelController = new AbortController();
-        this.#tasks.clear();
         this.#pendingQueueCount = 0;
+    }
+
+    cancelAll() {
+        this.cancelPendingQueues();
+        this.#tasks.clear();
         for (const participant of this.#participants.values()) {
             participant.cancel();
         }

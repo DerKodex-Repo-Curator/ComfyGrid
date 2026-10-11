@@ -208,6 +208,11 @@ export class Layout {
         }
 
         const allBoardLayouts: Record<string, Record<string, FloatingPosition>> = {};
+        for (const [boardId, positions] of this.#floatingPositions) {
+            const key = boardId.split('-')[0];
+            const retained = Object.fromEntries(Object.entries(positions).filter(([id]) => !hasNodes || validNodeIds.has(id) || validWidgetIds.has(id)));
+            allBoardLayouts[key] = { ...allBoardLayouts[key], ...retained };
+        }
         for (const [boardId, grid] of appState.workspaceState.gridStackBoards) {
             const layout = (grid.save(true) ?? []) as GridStackWidget[];
             const idKeyLayout = layout.reduce(

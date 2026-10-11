@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { GridStack } from 'gridstack';
-  import { applyFloatingPositions, gs, syncAndSaveLayout } from '@/services/gridstack-service';
+  import {
+    applyFloatingPositions,
+    gs,
+    isApplyingFloatingPositions,
+    syncAndSaveLayout,
+  } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup, ComfyGridNode } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
@@ -140,6 +145,7 @@
     applyFloatingPositions(gridKey);
 
     const handleGridChange = (event: Event, items?: unknown) => {
+      if (isApplyingFloatingPositions(grid)) return;
       logger.trace(`[LAYOUT_LOG] GridStack event: type="${event.type}", board="${gridKey}"`, items);
 
       const logicalKey = gridKey.split('-')[0];

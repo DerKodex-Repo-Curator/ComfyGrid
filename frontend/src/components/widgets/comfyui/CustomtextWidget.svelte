@@ -32,6 +32,7 @@
   let activeTranslationPromise: Promise<void> | null = null;
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
   let translationRequestId = 0;
+  const translationControllers = new Set<AbortController>();
 
   const floatingButtonTitle = $derived(
     layout.floatingWidgets.get(widget.id) ? 'node.move_to_group.title' : 'node.move_to_grid.title',
@@ -81,8 +82,10 @@
         return;
       }
 
+      const controller = new AbortController();
+      translationControllers.add(controller);
       try {
-        const res = await comfyGridApiClient.translate(model, text, system);
+        const res = await comfyGridApiClient.translate(model, text, system, controller.signal);
         if (currentReqId !== translationRequestId) {
           return;
         }
@@ -102,6 +105,7 @@
           widget.isDirty = true;
         }
       } finally {
+        translationControllers.delete(controller);
         if (currentReqId === translationRequestId) {
           widget.updateValue();
           widget.isTranslating = false;
@@ -124,7 +128,11 @@
 
   function registerOrUnregisterPending() {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-    const text = widget.rawValue ?? '';
+    const text = widget.rawValue ?? widget.value ?? '';
+    const translatedInput = widget.node.comfyNode.properties.rawValues?.[widget.index];
+    if (isTranslate && text.trim() !== '' && translatedInput !== text) {
+      widget.isDirty = true;
+    }
     if (isTranslate && timing !== 'manual' && widget.isDirty && text.trim() !== '') {
       translationManager.register(widget.id, () => triggerTranslation(text));
     } else {
@@ -139,6 +147,27 @@
     widget.isTranslating = false;
     widget.translationFailed = false;
   }
+
+  function cancelTranslation() {
+    invalidateActiveTranslation();
+    for (const controller of translationControllers) {
+      controller.abort();
+    }
+    translationControllers.clear();
+    if (inputTimer) {
+      clearTimeout(inputTimer);
+      inputTimer = null;
+    }
+    translationManager.unregister(widget.id);
+  }
+
+  $effect(() =>
+    translationManager.registerCancellation(
+      widget.id,
+      cancelTranslation,
+      registerOrUnregisterPending,
+    ),
+  );
 
   function handleManualTranslate() {
     const raw = widget.rawValue;

@@ -89,31 +89,35 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
+        translationManager.registerPendingTranslations();
+        const signal = translationManager.cancellationSignal;
         const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
         if (isWaiting) {
             translationManager.incrementPendingQueue(batchCount);
         }
         try {
-            await translationManager.waitForAllTranslations();
+            if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
             this.#app.queuePrompt(0, batchCount);
         } finally {
-            if (isWaiting) {
+            if (isWaiting && !signal.aborted) {
                 translationManager.decrementPendingQueue(batchCount);
             }
         }
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
+        translationManager.registerPendingTranslations();
+        const signal = translationManager.cancellationSignal;
         const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
         if (isWaiting) {
             translationManager.incrementPendingQueue(1);
         }
         try {
-            await translationManager.waitForAllTranslations();
+            if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
             const { nodeId } = payload;
             await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
         } finally {
-            if (isWaiting) {
+            if (isWaiting && !signal.aborted) {
                 translationManager.decrementPendingQueue(1);
             }
         }

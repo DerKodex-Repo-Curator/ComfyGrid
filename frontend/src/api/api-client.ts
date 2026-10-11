@@ -33,6 +33,7 @@ async function fetchApiJson<T = unknown>(url: string, options: RequestInit = {})
         }
         return { ok: false, status: res.status, json: {} as T };
     } catch (e) {
+        if (options.signal?.aborted) throw e;
         logger.error(url, e);
         return { ok: false, status: 500, json: {} as T };
     }
@@ -338,15 +339,16 @@ class ComfyGridApiClient {
         return await fetchApiJson('/comfygrid/api/pages');
     }
 
-    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[] }>> {
+    async getLlmStatus(): Promise<ApiResultJson<{ available: boolean; models: string[]; model_sizes?: Record<string, number | null> }>> {
         return await fetchApiJson('/comfygrid/api/llm/status');
     }
 
-    async translate(model: string, text: string, system?: string): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
+    async translate(model: string, text: string, system?: string, signal?: AbortSignal): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
         return await fetchApiJson('/comfygrid/api/llm/translate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model, text, system }),
+            signal,
         });
     }
 }

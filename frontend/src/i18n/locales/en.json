@@ -139,6 +139,8 @@
     "widget.select.negative_prompt.title": "Negative Prompt",
     "widget.select.translate.title": "Ollama",
     "widget.translate.indicator": "Translating...",
+    "widget.translate.cancel": "Cancel",
+    "widget.translate.cancel_hint": "Cancel all translations and execution requests waiting for translation",
     "widget.translate.completed": "Translated",
     "widget.translate.failed": "Failed",
     "widget.translate.manual_button": "Translate",

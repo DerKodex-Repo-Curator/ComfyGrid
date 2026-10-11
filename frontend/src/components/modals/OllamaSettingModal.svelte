@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { Loader2, RotateCw, Settings, TriangleAlert } from '@lucide/svelte';
   import { Modal } from 'bootstrap';
   import { comfyGridApiClient } from '@/api/api-client';
@@ -21,18 +22,23 @@
   let useGlobalSystem = $state(true);
 
   let models = $state<string[]>([]);
+  let modelSizes = $state<Record<string, number | null>>({});
+  let hasLoadedModels = false;
   let loadingModels = $state(false);
   let isAvailable = $state(true);
 
   const modalState = appState.ollamaSettingModalState;
 
   async function fetchModels() {
+    if (loadingModels) return;
     loadingModels = true;
     try {
       const res = await comfyGridApiClient.getLlmStatus();
       if (res.ok && res.json) {
         isAvailable = res.json.available;
-        models = res.json.models;
+        models = [...new Set(res.json.models)];
+        modelSizes = res.json.model_sizes ?? {};
+        hasLoadedModels = true;
         if (!model && models.length > 0) {
           model = models[0];
         }
@@ -47,6 +53,14 @@
     } finally {
       loadingModels = false;
     }
+  }
+
+  function formatModelSize(size: number | null | undefined): string {
+    if (size == null || !Number.isFinite(size) || size < 0) return '';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const unit =
+      size === 0 ? 0 : Math.min(Math.floor(Math.log(size) / Math.log(1000)), units.length - 1);
+    return `${(size / 1000 ** unit).toFixed(unit === 0 ? 0 : 1)} ${units[unit]}`;
   }
 
   $effect(() => {
@@ -74,7 +88,13 @@
 
       model = customModel ?? optionState.get('ComfyGrid.ollama.model') ?? '';
       system = customSystem ?? optionState.get('ComfyGrid.ollama.system') ?? '';
-      fetchModels();
+      untrack(() => {
+        if (!hasLoadedModels) {
+          void fetchModels();
+        } else if (!model && models.length > 0) {
+          model = models[0];
+        }
+      });
       bsModal.show();
     } else {
       bsModal.hide();
@@ -169,21 +189,23 @@
                 <option value="" disabled>No models found</option>
               {:else}
                 {#each models as m (m)}
-                  <option value={m}>{m}</option>
+                  <option value={m}
+                    >{m}{modelSizes[m] != null
+                      ? ` (${formatModelSize(modelSizes[m])})`
+                      : ''}</option
+                  >
                 {/each}
               {/if}
             </select>
-            {#if isAvailable}
-              <button
-                class="btn btn-outline-secondary d-flex align-items-center justify-content-center"
-                type="button"
-                onclick={fetchModels}
-                disabled={loadingModels}
-                title={$t('menu.reload') ?? 'Reload'}
-              >
-                <RotateCw size={16} class={loadingModels ? 'spin' : ''} />
-              </button>
-            {/if}
+            <button
+              class="btn btn-outline-secondary d-flex align-items-center justify-content-center"
+              type="button"
+              onclick={fetchModels}
+              disabled={loadingModels}
+              title={$t('menu.reload') ?? 'Reload'}
+            >
+              <RotateCw size={16} class={loadingModels ? 'spin' : ''} />
+            </button>
           </div>
         </div>
 

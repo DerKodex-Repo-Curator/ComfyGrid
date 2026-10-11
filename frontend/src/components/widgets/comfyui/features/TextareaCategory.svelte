@@ -1,9 +1,10 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { Check, Languages, Loader2, Settings, TriangleAlert } from '@lucide/svelte';
+  import { Check, Languages, Loader2, Settings, TriangleAlert, X } from '@lucide/svelte';
   import { t } from '@/i18n/i18n';
   import { callLayoutChangedCallbacks } from '@/services/callback-service';
   import { saveLayoutObject } from '@/services/gridstack-service';
+  import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
 
@@ -127,6 +128,15 @@
     <span class="badge text-bg-primary ms-2 fs-7 d-inline-flex align-items-center gap-1">
       <Loader2 size={14} class="spin" />
       {$t('widget.translate.indicator')}
+      <button
+        type="button"
+        class="btn text-white p-0 border-0 d-inline-flex align-items-center justify-content-center"
+        title={$t('widget.translate.cancel_hint')}
+        aria-label={$t('widget.translate.cancel_hint')}
+        onclick={() => translationManager.cancelAll()}
+      >
+        <X size={14} />
+      </button>
     </span>
   {:else if isTranslate && isManual && widget.isDirty}
     <button

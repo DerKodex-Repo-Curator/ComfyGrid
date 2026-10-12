@@ -57,10 +57,7 @@
     const oldIndex = galleryState.currentJobIndex;
     galleryState.deleteJob(galleryState.currentGalleryJob.jobId);
 
-    setTimeout(() => {
-      const nextIndex = Math.min(galleryState.galleryJobs.length - 1, oldIndex);
-      galleryState.selectedJobIndex = Math.max(0, nextIndex);
-    }, 0);
+    galleryState.selectedJobIndex = Math.max(0, oldIndex - 1);
     e.stopPropagation();
   }
 

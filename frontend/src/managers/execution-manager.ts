@@ -15,13 +15,23 @@ import { mediaProcessor } from './media-processor';
  *
  * **When `executionState` progress is reset (`handleTaskFinished`):** the server reports an empty
  * queue (`handleStatus`), or the last tracked job completes while the queue is empty
- * (`handleExecutionSuccess`), or a new prompt is queued after no jobs were active
- * (`handlePromptQueued` via {@link GallerySession.beginQueuedPrompt}).
+ * (`handleExecutionSuccess`).
  */
 
 class ExecutionManager {
     #lastQueueRemaining: number = -1;
     #isRestoring = false;
+
+    beginExecutionRequest(): () => void {
+        const shouldClearGallery = gallerySession.beginExecutionRequest();
+        try {
+            if (shouldClearGallery) appState.galleryState.clearViewedJobs();
+        } catch (error) {
+            gallerySession.finishExecutionRequest();
+            throw error;
+        }
+        return () => gallerySession.finishExecutionRequest();
+    }
 
     handleSamplingInfo(payload: { jobId: string; [key: string]: string }) {
         const { jobId, ...metadata } = payload;

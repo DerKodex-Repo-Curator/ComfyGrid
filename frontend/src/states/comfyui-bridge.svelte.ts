@@ -1,5 +1,6 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
+import { executionManager } from '@/managers/execution-manager';
 import { translationManager } from '@/services/translation-service.svelte';
 import type { ComfyGraph, ComfyNode } from '@/types/comfy-model';
 import logger from '@/utils/logger';
@@ -89,37 +90,41 @@ export class ComfyUiBridge {
      * @param batchCount - Number of batches to queue
      */
     async queuePrompt(batchCount: number): Promise<void> {
-        translationManager.registerPendingTranslations();
-        const signal = translationManager.cancellationSignal;
-        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
-        if (isWaiting) {
-            translationManager.incrementPendingQueue(batchCount);
-        }
+        const finishRequest = executionManager.beginExecutionRequest();
+        let signal: AbortSignal | undefined;
+        let isWaiting = false;
         try {
+            translationManager.registerPendingTranslations();
+            signal = translationManager.cancellationSignal;
+            isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+            if (isWaiting) translationManager.incrementPendingQueue(batchCount);
             if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
-            this.#app.queuePrompt(0, batchCount);
+            await this.#app.queuePrompt(0, batchCount);
         } finally {
-            if (isWaiting && !signal.aborted) {
+            if (isWaiting && !signal?.aborted) {
                 translationManager.decrementPendingQueue(batchCount);
             }
+            finishRequest();
         }
     }
 
     async nodeQueue(payload: { nodeId: string }): Promise<void> {
-        translationManager.registerPendingTranslations();
-        const signal = translationManager.cancellationSignal;
-        const isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
-        if (isWaiting) {
-            translationManager.incrementPendingQueue(1);
-        }
+        const finishRequest = executionManager.beginExecutionRequest();
+        let signal: AbortSignal | undefined;
+        let isWaiting = false;
         try {
+            translationManager.registerPendingTranslations();
+            signal = translationManager.cancellationSignal;
+            isWaiting = translationManager.isTranslating || translationManager.hasPendingTasks;
+            if (isWaiting) translationManager.incrementPendingQueue(1);
             if (!(await translationManager.waitForAllTranslations(signal)) || signal.aborted) return;
             const { nodeId } = payload;
             await nodeQueueManager.queueOutputNodes(this.#app, nodeId);
         } finally {
-            if (isWaiting && !signal.aborted) {
+            if (isWaiting && !signal?.aborted) {
                 translationManager.decrementPendingQueue(1);
             }
+            finishRequest();
         }
     }
 

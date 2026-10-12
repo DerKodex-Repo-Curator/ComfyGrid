@@ -36,6 +36,7 @@
   type FlatNodeEntry = { group: ComfyGridGroup; node: ComfyGridNode };
 
   const commonTabBoard = $derived(workspaceState.layout.commonTabBoard);
+  const tabId = $derived(commonTabBoard ? undefined : (groupId ?? '__ungrouped__'));
 
   const groups = $derived.by(() => {
     let filteredGroups: ReadonlyArray<ComfyGridGroup>;
@@ -77,7 +78,7 @@
   }
 
   const nodesInBoard = $derived.by(() => {
-    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, groupId);
+    const effectiveNodes = workspaceState.getEffectiveNodes(boardId, tabId);
     const nodeSet = new Set(effectiveNodes.map((n) => n.id));
     return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
   });
@@ -90,6 +91,7 @@
       widget: any;
     }> = [];
     const allEntries = flattenNodes(workspaceState.groups);
+    const nodeTabMap = workspaceState.nodeTabMap;
 
     for (const entry of allEntries) {
       for (const widget of entry.node.widgets) {
@@ -100,7 +102,7 @@
           if (boardId === 'Global' && targetBoard === 'Global') {
             result.push({ group: entry.group, node: entry.node, widget });
           } else if (boardId === 'Tab' && targetBoard === 'Tab') {
-            if (commonTabBoard || groupId === undefined || entry.group.id === groupId) {
+            if (commonTabBoard || (nodeTabMap.get(entry.node.id) ?? '__ungrouped__') === tabId) {
               result.push({ group: entry.group, node: entry.node, widget });
             }
           }

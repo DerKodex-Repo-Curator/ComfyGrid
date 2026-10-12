@@ -25,7 +25,11 @@
   const commonTabBoard = $derived(workspaceState.layout.commonTabBoard);
   const effectiveGroupId = $derived(commonTabBoard ? undefined : group?.id);
   const showBoard = $derived(
-    (!commonTabBoard || !group) && workspaceState.hasEffectiveNodes('Tab', effectiveGroupId),
+    (!commonTabBoard || !group) &&
+      workspaceState.hasEffectiveNodes(
+        'Tab',
+        commonTabBoard ? undefined : (effectiveGroupId ?? '__ungrouped__'),
+      ),
   );
 </script>
 

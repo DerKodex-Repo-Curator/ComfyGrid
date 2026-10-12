@@ -416,25 +416,25 @@ class WorkspaceState {
     getEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): ComfyGridNode[] {
         const commonTabBoard = this.#layout.commonTabBoard;
 
-        const nodeGroupMap = this.nodeGroupMap;
+        const nodeTabMap = this.nodeTabMap;
 
         return Array.from(this.#nodes.values()).filter((node) => {
             if (!node.isVisible) return false;
 
             const floatingBoard = this.#layout.floatingNodes.get(node.id);
-            const parentGroup = nodeGroupMap.get(node.id);
+            const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
 
             if (floatingBoard) {
                 if (boardTarget === 'Global') return floatingBoard === 'Global';
                 if (boardTarget === 'Tab') {
                     if (commonTabBoard) return floatingBoard === 'Tab';
-                    return floatingBoard === 'Tab' && (groupId === undefined || parentGroup?.id === groupId);
+                    return floatingBoard === 'Tab' && (groupId === undefined || tabId === groupId);
                 }
                 return false;
             }
 
             if (boardTarget === '' || boardTarget === 'default') {
-                return !parentGroup?.isTabify;
+                return tabId === '__ungrouped__';
             }
 
             return false;
@@ -462,6 +462,19 @@ class WorkspaceState {
         return this.#groups.find((g) => g.id === groupId);
     }
 
+    get nodeTabMap(): ReadonlyMap<string, string> {
+        // Nested groups share the tab of their top-level group.
+        // eslint-disable-next-line svelte/prefer-svelte-reactivity
+        const map = new Map<string, string>();
+        for (const group of this.#groups) {
+            const tabId = group.isTabify ? group.id : '__ungrouped__';
+            for (const node of group.allNodes) {
+                map.set(node.id, tabId);
+            }
+        }
+        return map;
+    }
+
     hasEffectiveNodes(boardTarget: BoardId | 'default' = '', groupId?: string): boolean {
         if (this.getEffectiveNodes(boardTarget, groupId).length > 0) {
             return true;
@@ -470,20 +483,16 @@ class WorkspaceState {
             return false;
         }
         const commonTabBoard = this.#layout.commonTabBoard;
+        const nodeTabMap = this.nodeTabMap;
         for (const [widgetId, targetBoard] of this.#layout.floatingWidgets) {
             if (targetBoard !== 'Tab') {
                 continue;
             }
-            if (commonTabBoard) {
-                return true;
-            }
-            if (groupId) {
-                for (const node of this.#nodes.values()) {
-                    if (node.widgets.some((w) => w.id === widgetId)) {
-                        const parentGroup = this.nodeGroupMap.get(node.id);
-                        if (parentGroup?.id === groupId) {
-                            return true;
-                        }
+            for (const node of this.#nodes.values()) {
+                if (node.widgets.some((w) => w.id === widgetId && w.type === 'customtext')) {
+                    const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
+                    if (commonTabBoard || groupId === undefined || tabId === groupId) {
+                        return true;
                     }
                 }
             }
@@ -496,15 +505,15 @@ class WorkspaceState {
 
         if (tabId === '__ungrouped__') {
             const hasDefaultNodes = this.getEffectiveNodes('default').length > 0;
-            const hasCommonTabBoardNodes = commonTabBoard && this.hasEffectiveNodes('Tab');
-            return hasDefaultNodes || hasCommonTabBoardNodes;
+            const hasTabBoardNodes = this.hasEffectiveNodes('Tab', commonTabBoard ? undefined : '__ungrouped__');
+            return hasDefaultNodes || hasTabBoardNodes;
         }
 
         const group = this.getGroup(tabId);
         if (!group) return false;
 
         const hasGroupVisibleNodes = group.hasVisibleNodes;
-        const hasFloatingOnThisTab = !commonTabBoard && (this.getEffectiveNodes('Tab', tabId).length > 0 || this.hasEffectiveNodes('Tab', tabId));
+        const hasFloatingOnThisTab = !commonTabBoard && this.hasEffectiveNodes('Tab', tabId);
 
         return hasGroupVisibleNodes || hasFloatingOnThisTab;
     }
@@ -519,9 +528,7 @@ class WorkspaceState {
 
         if (tabId === '__ungrouped__') {
             const nodes = [...this.getEffectiveNodes('default')];
-            if (commonTabBoard) {
-                nodes.push(...this.getEffectiveNodes('Tab'));
-            }
+            nodes.push(...this.getEffectiveNodes('Tab', commonTabBoard ? undefined : '__ungrouped__'));
             return nodes;
         }
 

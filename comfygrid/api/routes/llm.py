@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
@@ -6,6 +7,8 @@ from pydantic import BaseModel
 from comfygrid.services import llm_service
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+TRANSLATION_TIMEOUT_SECONDS = 120.0
 
 
 class TranslateRequest(BaseModel):
@@ -34,10 +37,19 @@ async def translate_text(req: TranslateRequest, request: Request):
     translation = asyncio.create_task(llm_service.translate_text(req.model, req.text, req.system))
     disconnected = asyncio.create_task(wait_for_disconnect())
     try:
-        await asyncio.wait({translation, disconnected}, return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait({translation, disconnected}, timeout=TRANSLATION_TIMEOUT_SECONDS, return_when=asyncio.FIRST_COMPLETED)
+        if not done:
+            logger.warning("Ollama translation timed out.")
+            raise HTTPException(status_code=504, detail="Translation timed out.")
         if disconnected.done():
             raise HTTPException(status_code=499, detail="Translation cancelled.")
         return {"ok": True, "translated_text": await translation}
+    except ValueError as exc:
+        logger.warning("Invalid translation request: %s", exc)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        logger.warning("Ollama translation failed: %s", exc)
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     finally:
         translation.cancel()
         disconnected.cancel()

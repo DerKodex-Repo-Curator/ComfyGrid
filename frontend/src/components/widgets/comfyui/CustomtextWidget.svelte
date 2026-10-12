@@ -30,6 +30,7 @@
 
   let activeTranslationText = '';
   let activeTranslationPromise: Promise<void> | null = null;
+  let activeTranslationRequestId = 0;
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
   let translationRequestId = 0;
   const translationControllers = new Set<AbortController>();
@@ -39,8 +40,19 @@
   );
 
   async function triggerTranslation(text: string): Promise<void> {
-    if (widget.isTranslating && activeTranslationText === text && activeTranslationPromise) {
+    if (
+      activeTranslationRequestId === translationRequestId &&
+      activeTranslationText === text &&
+      activeTranslationPromise
+    ) {
       return activeTranslationPromise;
+    }
+
+    if (activeTranslationPromise) {
+      const requestedVersion = translationRequestId;
+      await activeTranslationPromise;
+      if (requestedVersion !== translationRequestId || !isTranslate) return;
+      return triggerTranslation(text);
     }
 
     if (!widget.isDirty && !widget.translationFailed) {
@@ -49,6 +61,7 @@
 
     activeTranslationText = text;
     const currentReqId = ++translationRequestId;
+    activeTranslationRequestId = currentReqId;
 
     const execute = async () => {
       if (!text.trim()) {
@@ -74,11 +87,7 @@
         console.warn('Ollama model not specified.');
         if (currentReqId === translationRequestId) {
           widget.value = text;
-          widget.isTranslating = translationControllers.size > 0;
-          widget.translationFailed = true;
-          widget.isDirty = true;
-          translationManager.unregister(widget.id);
-          translationManager.cancelPendingQueues();
+          failTranslation();
         }
         return;
       }
@@ -112,23 +121,24 @@
           widget.isTranslating = translationControllers.size > 0;
         }
         if (currentReqId === translationRequestId) {
+          if (widget.translationFailed) failTranslation();
           widget.updateValue();
-          if (widget.translationFailed) translationManager.cancelPendingQueues();
           saveLayoutObject(layout);
           registerOrUnregisterPending();
         }
       }
     };
 
-    activeTranslationPromise = execute().finally(() => {
-      if (currentReqId === translationRequestId) {
+    const promise = execute().finally(() => {
+      if (activeTranslationPromise === promise) {
         activeTranslationPromise = null;
         activeTranslationText = '';
       }
     });
-    translationManager.trackPromise(activeTranslationPromise);
+    activeTranslationPromise = promise;
+    translationManager.trackPromise(promise);
 
-    return activeTranslationPromise;
+    return promise;
   }
 
   function registerOrUnregisterPending(retryFailed = false) {
@@ -154,8 +164,6 @@
 
   function invalidateActiveTranslation() {
     translationRequestId++;
-    activeTranslationText = '';
-    activeTranslationPromise = null;
     widget.isTranslating = translationControllers.size > 0;
     widget.translationFailed = false;
   }
@@ -166,12 +174,21 @@
       controller.abort();
     }
     translationControllers.clear();
+    activeTranslationPromise = null;
+    activeTranslationText = '';
+    activeTranslationRequestId = 0;
     widget.isTranslating = false;
     if (inputTimer) {
       clearTimeout(inputTimer);
       inputTimer = null;
     }
     translationManager.unregister(widget.id);
+  }
+
+  function failTranslation() {
+    translationManager.cancelAll();
+    widget.translationFailed = true;
+    widget.isDirty = true;
   }
 
   $effect(() =>
@@ -238,6 +255,7 @@
     const config = currentOllamaConfig;
     untrack(() => {
       if (previousOllamaConfig !== null && previousOllamaConfig !== config) {
+        invalidateActiveTranslation();
         widget.isDirty = true;
         const text = widget.rawValue ?? '';
         if (isTranslate && text.trim()) {

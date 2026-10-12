@@ -7,6 +7,8 @@ import type { Version } from '@/types/verion';
 import type { WorkflowListResponse } from '@/types/workflow';
 import logger from '@/utils/logger';
 
+const TRANSLATION_TIMEOUT_MS = 125_000;
+
 type ApiResult = {
     ok: boolean;
     status: number;
@@ -344,12 +346,32 @@ class ComfyGridApiClient {
     }
 
     async translate(model: string, text: string, system?: string, signal?: AbortSignal): Promise<ApiResultJson<{ ok: boolean; translated_text: string }>> {
-        return await fetchApiJson('/comfygrid/api/llm/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, text, system }),
-            signal,
-        });
+        const controller = new AbortController();
+        const cancel = () => controller.abort(signal?.reason);
+        if (signal?.aborted) cancel();
+        else signal?.addEventListener('abort', cancel, { once: true });
+        const timeout = setTimeout(() => controller.abort(new DOMException('Translation request timed out.', 'TimeoutError')), TRANSLATION_TIMEOUT_MS);
+        let rejectOnAbort: (() => void) | undefined;
+        try {
+            if (controller.signal.aborted) throw controller.signal.reason;
+            const cancelled = new Promise<never>((_, reject) => {
+                rejectOnAbort = () => reject(controller.signal.reason);
+                controller.signal.addEventListener('abort', rejectOnAbort, { once: true });
+            });
+            return await Promise.race([
+                fetchApiJson<{ ok: boolean; translated_text: string }>('/comfygrid/api/llm/translate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model, text, system }),
+                    signal: controller.signal,
+                }),
+                cancelled,
+            ]);
+        } finally {
+            clearTimeout(timeout);
+            signal?.removeEventListener('abort', cancel);
+            if (rejectOnAbort) controller.signal.removeEventListener('abort', rejectOnAbort);
+        }
     }
 }
 

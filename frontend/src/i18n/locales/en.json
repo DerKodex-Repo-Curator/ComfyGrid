@@ -64,6 +64,7 @@
     "opts.ComfyGrid.ollama.translate_timing.choice.on_generate": "On generate",
     "opts.ComfyGrid.ollama.translate_timing.choice.on_blur": "On blur",
     "opts.ComfyGrid.ollama.translate_timing.choice.manual": "Manual",
+    "opts.ComfyGrid.ollama.use_codemirror.label": "Use CodeMirror for Ollama text editing",
     "opts.ComfyGrid.prompt_pilot.enabled.label": "Prompt Autocompletion (PromptPilot)",
     "opts.ComfyGrid.prompt_pilot.enabled.hint": "Enable Danbooru tag and LoRA autocompletion in prompt inputs.",
     "opts.ComfyGrid.prompt_pilot.tag_source.label": "Tag Data Source",

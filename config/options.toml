@@ -122,6 +122,10 @@ type = "dropdown"
 choices = ["on_generate", "on_blur", "manual"]
 default = "on_generate"
 
+[ComfyGrid.ollama.use_codemirror]
+type = "checkbox"
+default = false
+
 [ComfyGrid.prompt_pilot.enabled]
 type = "checkbox"
 default = true

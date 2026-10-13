@@ -26,6 +26,9 @@
   const isPositivePrompt = $derived(layout.positivePromptWidgetId === widget.id);
   const isNegativePrompt = $derived(layout.negativePromptWidgetId === widget.id);
   const isTranslate = $derived(layout.isTranslateWidget(widget.id));
+  const useOllamaCodeMirror = $derived(
+    Boolean(appState.optionState.get('ComfyGrid.ollama.use_codemirror')),
+  );
   const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
 
   let activeTranslationText = '';
@@ -33,6 +36,7 @@
   let activeTranslationRequestId = 0;
   let inputTimer: ReturnType<typeof setTimeout> | null = null;
   let translationRequestId = 0;
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity
   const translationControllers = new Set<AbortController>();
 
   const floatingButtonTitle = $derived(
@@ -296,7 +300,17 @@
 </script>
 
 {#snippet textarea()}
-  {#if isPromptGroup}
+  {#if isTranslate && useOllamaCodeMirror}
+    <PromptEditor
+      rows={options.isFloating ? 1 : 6}
+      readonly={widget.readonly}
+      placeholder={widget.placeholder}
+      bind:value={widget.rawValue}
+      enablePromptPilot={false}
+      oninput={handleInput}
+      onblur={handleBlur}
+    />
+  {:else if isPromptGroup}
     <PromptEditor
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}

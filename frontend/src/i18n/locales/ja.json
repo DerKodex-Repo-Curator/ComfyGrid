@@ -64,6 +64,7 @@
     "opts.ComfyGrid.ollama.translate_timing.choice.on_generate": "画像生成を開始したとき",
     "opts.ComfyGrid.ollama.translate_timing.choice.on_blur": "フォーカスを外したとき",
     "opts.ComfyGrid.ollama.translate_timing.choice.manual": "手動実行",
+    "opts.ComfyGrid.ollama.use_codemirror.label": "Ollamaのテキスト編集にCodeMirrorを使用する",
     "opts.ComfyGrid.prompt_pilot.enabled.label": "プロンプト補完 (PromptPilot)",
     "opts.ComfyGrid.prompt_pilot.enabled.hint": "プロンプト入力欄でDanbooruタグやLoRAのリアルタイム補完機能を有効にします。",
     "opts.ComfyGrid.prompt_pilot.tag_source.label": "タグデータソース",

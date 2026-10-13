@@ -9,7 +9,7 @@
     selectNextOccurrence,
     selectSelectionMatches,
   } from '@codemirror/search';
-  import { EditorState } from '@codemirror/state';
+  import { Compartment, EditorState } from '@codemirror/state';
   import {
     EditorView,
     placeholder as cmPlaceholder,
@@ -33,6 +33,7 @@
     placeholder = '',
     readonly = false,
     rows = 6,
+    enablePromptPilot = true,
     oninput,
     onblur,
     onkeydown,
@@ -41,6 +42,7 @@
     placeholder?: string;
     readonly?: boolean;
     rows?: number;
+    enablePromptPilot?: boolean;
     oninput?: (e: Event) => void;
     onblur?: (e: FocusEvent) => void;
     onkeydown?: (e: KeyboardEvent) => void;
@@ -49,6 +51,7 @@
   let container = $state<HTMLDivElement>();
   let view = $state<EditorView>();
   let isInternalChange = false;
+  const completionCompartment = new Compartment();
 
   const minHeight = $derived(rows === 1 ? '38px' : `${rows * 24}px`);
 
@@ -95,7 +98,7 @@
         cmPlaceholder(placeholder),
         promptHighlightPlugin,
         bracketMatchingPlugin,
-        promptPilotCompletion(),
+        completionCompartment.of(enablePromptPilot ? promptPilotCompletion() : []),
         loraHoverPlugin(),
         highlightSelectionMatches({
           minSelectionLength: 1,
@@ -133,6 +136,15 @@
     return () => {
       view?.destroy();
     };
+  });
+
+  $effect(() => {
+    const enabled = enablePromptPilot;
+    if (view) {
+      view.dispatch({
+        effects: completionCompartment.reconfigure(enabled ? promptPilotCompletion() : []),
+      });
+    }
   });
 
   $effect(() => {

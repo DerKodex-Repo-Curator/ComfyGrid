@@ -19,6 +19,7 @@
   import { appState } from '@/states/app-state.svelte';
   import { bracketMatchingPlugin } from './prompt-editor/bracket-matching';
   import { loraHoverPlugin } from './prompt-editor/lora-hover';
+  import { multiSelectionImePlugin } from './prompt-editor/multi-selection-ime';
   import { promptAttentionKeymap } from './prompt-editor/prompt-attention';
   import {
     promptHighlightPlugin,
@@ -69,6 +70,7 @@
           createPanel: (v) => new CustomSearchPanel(v),
         }),
         EditorState.allowMultipleSelections.of(true),
+        multiSelectionImePlugin,
         keymap.of([
           {
             key: 'Ctrl-Enter',

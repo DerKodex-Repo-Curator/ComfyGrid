@@ -3,13 +3,16 @@
   import {
     ArrowBigDown,
     ArrowBigUp,
+    CopyPlus,
     Info,
     LayoutDashboard,
     Locate,
     PictureInPicture,
     Play,
   } from '@lucide/svelte';
+  import { NodeDuplicationError, getNodeDuplicationIssue } from '@/bridge/node-duplication';
   import { t } from '@/i18n/i18n';
+  import { nodeDuplicationManager } from '@/managers/node-duplication-manager';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
@@ -62,6 +65,8 @@
   );
 
   let isTitleEditing = $state(false);
+  let isDuplicating = $state(false);
+  const duplicationIssue = $derived(getNodeDuplicationIssue(node.comfyNode));
   let title = $derived.by(() => {
     if (widget) {
       return node.title + ' - ' + widget.name;
@@ -240,6 +245,21 @@
     appState.bridge?.nodeQueue({ nodeId: node.id });
   }
 
+  async function handleDuplicateNode(e: Event) {
+    e.stopPropagation();
+    if (isDuplicating) return;
+    isDuplicating = true;
+    try {
+      await nodeDuplicationManager.duplicateNode(node);
+    } catch (error) {
+      logger.error('Failed to duplicate node:', error);
+      const issue = error instanceof NodeDuplicationError ? error.issue : 'failed';
+      appState.toastState.addToast({ type: 'error', message: $t(`node.duplicate.error.${issue}`) });
+    } finally {
+      isDuplicating = false;
+    }
+  }
+
   function handleChangeTitle() {
     node.title = node.title.trim();
   }
@@ -312,6 +332,22 @@
               onclick={handleExecuteNode}
             >
               <Play size={12} />
+            </button>
+          {/if}
+          {#if !node.isNote}
+            <button
+              type="button"
+              class="btn btn-xs btn-icon btn-secondary"
+              title={$t(
+                duplicationIssue
+                  ? `node.duplicate.error.${duplicationIssue}`
+                  : 'node.duplicate.title',
+              )}
+              aria-label={$t('node.duplicate.title')}
+              disabled={isDuplicating || Boolean(duplicationIssue)}
+              onclick={handleDuplicateNode}
+            >
+              <CopyPlus size={12} />
             </button>
           {/if}
           {#if appState.isDebugMode}

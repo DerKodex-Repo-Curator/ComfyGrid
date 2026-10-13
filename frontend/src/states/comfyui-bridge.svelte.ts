@@ -1,4 +1,5 @@
 import { ComfyUiApiHook } from '@/bridge/comfyui-api-hook';
+import { NodeDuplicationError, duplicateNodeAfter } from '@/bridge/node-duplication';
 import { nodeQueueManager } from '@/bridge/node-queue-manager';
 import { executionManager } from '@/managers/execution-manager';
 import { translationManager } from '@/services/translation-service.svelte';
@@ -40,6 +41,12 @@ export class ComfyUiBridge {
     }
 
     private constructor() {}
+
+    duplicateNode(payload: { nodeId: string }): ComfyNode {
+        const source = appState.workspaceState.getRealNode(payload.nodeId)?.comfyNode;
+        if (!source) throw new NodeDuplicationError('unavailable');
+        return duplicateNodeAfter(source);
+    }
 
     /**
      * Get list of all workflow tab items in ComfyUI.

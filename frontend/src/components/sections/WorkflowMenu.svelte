@@ -1,7 +1,10 @@
 <script lang="ts">
-  import { Check, Workflow } from '@lucide/svelte';
+  import { Workflow } from '@lucide/svelte';
+  import AppMenu from '@/components/common/AppMenu.svelte';
+  import { t } from '@/i18n/i18n';
   import { appState } from '@/states/app-state.svelte';
   import type { WorkflowTabItem } from '@/states/comfyui-bridge.svelte';
+  import type { MenuEntry } from '@/types/menu';
 
   const uiState = appState.uiState;
 
@@ -24,37 +27,34 @@
       uiState.needRefresh = true;
     }
   }
+  const items = $derived(
+    workflowTabs.map((item, index): MenuEntry => ({
+      id: `${item.label}-${index}`,
+      kind: 'action',
+      label: item.label,
+      selected: item.selected,
+      onSelect: () => handleSelectTab(item),
+    })),
+  );
 </script>
 
-<div class="dropdown">
-  <button
-    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
-    type="button"
-    data-bs-toggle="dropdown"
-    aria-expanded="false"
-    style="width: 2.2rem; height: 2.2rem;"
-    onclick={refreshWorkflowTabs}
-    onpointerenter={refreshWorkflowTabs}
-    ><Workflow size={18} />
-  </button>
-
-  <ul class="dropdown-menu">
-    {#each workflowTabs as item, index (`${item.label}-${index}`)}
-      <li>
-        <button
-          class="dropdown-item d-flex align-items-center justify-content-between gap-2"
-          class:active={item.selected}
-          onclick={() => handleSelectTab(item)}
-        >
-          <span class="text-truncate">{item.label}</span>
-          {#if item.selected}
-            <Check size={14} />
-          {/if}
-        </button>
-      </li>
-    {/each}
-  </ul>
-</div>
+<AppMenu
+  {items}
+  onOpenChange={(open) => {
+    if (open) refreshWorkflowTabs();
+  }}
+>
+  {#snippet trigger({ props })}
+    <button
+      {...props}
+      class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
+      type="button"
+      aria-label={$t('menu.workflows')}
+      style="width: 2.2rem; height: 2.2rem;"
+      ><Workflow size={18} />
+    </button>
+  {/snippet}
+</AppMenu>
 
 <style lang="scss">
   .dropdown-toggle::after {

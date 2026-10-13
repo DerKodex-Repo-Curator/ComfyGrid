@@ -161,6 +161,9 @@ export class Layout {
     set commonTabBoard(val: boolean) {
         this.#commonTabBoard = val;
     }
+    setDisplayOption(option: 'commonTabBoard' | 'showNoteNodes' | 'showCollapsedNodes' | 'showControlLessNodes' | 'showRenderableLessNodes', value: boolean) {
+        this[option] = value;
+    }
     set sortOrder(sortOrder: 'default' | 'name') {
         this.#sortOrder = sortOrder;
     }

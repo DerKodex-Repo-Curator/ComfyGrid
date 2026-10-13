@@ -1,6 +1,7 @@
 @use 'bootstrap/dist/css/bootstrap.min.css';
 @use 'gridstack/dist/gridstack.min.css';
 @use 'lucide-static/font/lucide.css';
+@use './menus';
 
 @layer base, utilities, components;
 

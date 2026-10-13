@@ -3,23 +3,20 @@
   import {
     ArrowBigDown,
     ArrowBigUp,
-    CopyPlus,
-    Info,
     LayoutDashboard,
     Locate,
     PictureInPicture,
-    Play,
   } from '@lucide/svelte';
-  import { NodeDuplicationError, getNodeDuplicationIssue } from '@/bridge/node-duplication';
   import { t } from '@/i18n/i18n';
-  import { nodeDuplicationManager } from '@/managers/node-duplication-manager';
   import { notifyNodeChanged } from '@/services/custom-node-service.svelte';
   import { updateBoardFloatingState } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridNode, ComfyGridWidget } from '@/states/model-state.svelte';
   import type { BoardId } from '@/types/board';
+  import type { MenuEntry } from '@/types/menu';
   import { COMFY_NODE_MODE, type ComfyNodeMode } from '@/types/model-shared';
   import logger from '@/utils/logger';
+  import NodeHeaderMenu from './NodeHeaderMenu.svelte';
   import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
   import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
@@ -65,8 +62,6 @@
   );
 
   let isTitleEditing = $state(false);
-  let isDuplicating = $state(false);
-  const duplicationIssue = $derived(getNodeDuplicationIssue(node.comfyNode));
   let title = $derived.by(() => {
     if (widget) {
       return node.title + ' - ' + widget.name;
@@ -241,25 +236,6 @@
     e.stopPropagation();
   }
 
-  function handleExecuteNode() {
-    appState.bridge?.nodeQueue({ nodeId: node.id });
-  }
-
-  async function handleDuplicateNode(e: Event) {
-    e.stopPropagation();
-    if (isDuplicating) return;
-    isDuplicating = true;
-    try {
-      await nodeDuplicationManager.duplicateNode(node);
-    } catch (error) {
-      logger.error('Failed to duplicate node:', error);
-      const issue = error instanceof NodeDuplicationError ? error.issue : 'failed';
-      appState.toastState.addToast({ type: 'error', message: $t(`node.duplicate.error.${issue}`) });
-    } finally {
-      isDuplicating = false;
-    }
-  }
-
   function handleChangeTitle() {
     node.title = node.title.trim();
   }
@@ -268,26 +244,32 @@
     e.focus();
   }
 
-  function getNodeInfo() {
-    return {
-      id: node.id,
-      type: node.type,
-      constructorName: node.constructorName,
-      comfyClass: node.comfyClass,
-      widgets: containsWidgets.map((w) => ({
-        name: w.name,
-        value: w.value,
-        type: w.type,
-        className: w.className,
-      })),
-    };
-  }
-
   function focusNodeInComfyUI() {
     appState.comfyUiState.app?.canvas?.animateToBounds(node.comfyNode.boundingRect);
     appState.uiState.activePageId = 'comfyui';
     appState.uiState.needRefresh = true;
   }
+
+  const layoutMenuItems = $derived.by((): MenuEntry[] => {
+    const items: MenuEntry[] = [
+      {
+        id: 'floating',
+        kind: 'action',
+        label: $t(floatingButtonTitle),
+        icon: isFloating ? PictureInPicture : LayoutDashboard,
+        onSelect: toggleFloating,
+      },
+    ];
+    if (isFloating && otherBoardId)
+      items.push({
+        id: 'board',
+        kind: 'action',
+        label: $t('node.move_to_other_board'),
+        icon: currentBoardId === 'Global' ? ArrowBigDown : ArrowBigUp,
+        onSelect: () => moveToBoard(otherBoardId),
+      });
+    return items;
+  });
 
   $effect(() => {
     notifyNodeChanged(node.id, node);
@@ -305,136 +287,96 @@
   data-id={node.id}
   data-name={node.title}
 >
-  <div class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
-    {#if !isTitleEditing}
-      <div class="card-header-left">
-        {#if !widget}
-          {#if !node.isNote}
-            <NodeModeSelector
-              mode={new Set([node.mode])}
-              handleChange={(e, val) => handleStateChange(e, val)}
-            />
-          {/if}
-          {#if alwaysShowFocusButton || isInvalid}
-            <button
-              type="button"
-              class={`btn btn-xs btn-icon btn-${isInvalid ? 'danger' : 'secondary'}`}
-              title={$t('node.focus')}
-              onclick={focusNodeInComfyUI}
-            >
-              <Locate size={12} />
-            </button>
-          {/if}
-          {#if node.hasOutputNode}
-            <button
-              type="button"
-              class="btn btn-xs btn-primary d-flex align-items-center p-1"
-              onclick={handleExecuteNode}
-            >
-              <Play size={12} />
-            </button>
-          {/if}
-          {#if !node.isNote}
-            <button
-              type="button"
-              class="btn btn-xs btn-icon btn-secondary"
-              title={$t(
-                duplicationIssue
-                  ? `node.duplicate.error.${duplicationIssue}`
-                  : 'node.duplicate.title',
-              )}
-              aria-label={$t('node.duplicate.title')}
-              disabled={isDuplicating || Boolean(duplicationIssue)}
-              onclick={handleDuplicateNode}
-            >
-              <CopyPlus size={12} />
-            </button>
-          {/if}
-          {#if appState.isDebugMode}
-            <button
-              type="button"
-              class="btn btn-xs btn-icon btn-outline-secondary"
-              title={node.id}
-              onclick={(e) => {
-                e.stopPropagation();
-                const nodeInfo = getNodeInfo();
-                logger.info(nodeInfo);
-                appState.dialogState.showDialog({
-                  type: 'TypeInfo',
-                  title: 'Node Information',
-                  message: JSON.stringify(nodeInfo, null, 2),
-                });
-              }}
-            >
-              <Info size={12} />
-            </button>
-          {/if}
-        {/if}
-        {#if widget || (isTextareaOnly && !node.isNote)}
-          <TextareaCategory widget={widget ?? node.widgets[0]} />
-        {/if}
-      </div>
-    {/if}
-    {#if !isTitleEditing}
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <span
-        class="node-title"
-        class:floating={isFloating}
-        title="{title} ({node.id})"
-        ondblclick={() => {
-          if (!widget) {
-            isTitleEditing = true;
-          }
-        }}>{title}</span
-      >
-    {:else}
-      <input
-        type="text"
-        class="form-control"
-        bind:value={node.title}
-        use:focusOnMount
-        onblur={() => {
-          isTitleEditing = false;
-        }}
-        onkeypress={(e) => {
-          if (e.key === 'Enter') {
-            isTitleEditing = false;
-            handleChangeTitle();
-          }
-        }}
-      />
-    {/if}
-    {#if !isTitleEditing}
-      <div class="card-header-right">
-        {#if isFloating && otherBoardId}
-          <button
-            type="button"
-            class="btn btn-xs btn-icon"
-            title={$t('node.move_to_other_board')}
-            onclick={() => moveToBoard(otherBoardId)}
-          >
-            {#if currentBoardId === 'Global'}
-              <ArrowBigDown size={12} />
-            {:else}
-              <ArrowBigUp size={12} />
+  <NodeHeaderMenu {node} {widget} extraItems={layoutMenuItems} disabled={isTitleEditing}>
+    {#snippet trigger({ props })}
+      <div {...props} class="card-header" class:mute={node.mode === COMFY_NODE_MODE.MUTE}>
+        {#if !isTitleEditing}
+          <div class="card-header-left">
+            {#if !widget}
+              {#if !node.isNote}
+                <NodeModeSelector
+                  mode={new Set([node.mode])}
+                  handleChange={(e, val) => handleStateChange(e, val)}
+                />
+              {/if}
+              {#if alwaysShowFocusButton || isInvalid}
+                <button
+                  type="button"
+                  class={`btn btn-xs btn-icon btn-${isInvalid ? 'danger' : 'secondary'}`}
+                  title={$t('node.focus')}
+                  onclick={focusNodeInComfyUI}
+                >
+                  <Locate size={12} />
+                </button>
+              {/if}
             {/if}
-          </button>
+            {#if widget || (isTextareaOnly && !node.isNote)}
+              <TextareaCategory widget={widget ?? node.widgets[0]} />
+            {/if}
+          </div>
         {/if}
-        <button
-          type="button"
-          class="btn btn-xs btn-icon"
-          title={$t(floatingButtonTitle)}
-          onclick={toggleFloating}
-        >
-          {#if isFloating}
-            <PictureInPicture size={12} />
-          {:else}
-            <LayoutDashboard size={12} />
-          {/if}
-        </button>
+        {#if !isTitleEditing}
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <span
+            class="node-title"
+            class:floating={isFloating}
+            title="{title} ({node.id})"
+            ondblclick={() => {
+              if (!widget) {
+                isTitleEditing = true;
+              }
+            }}>{title}</span
+          >
+        {:else}
+          <input
+            type="text"
+            class="form-control"
+            bind:value={node.title}
+            use:focusOnMount
+            onblur={() => {
+              isTitleEditing = false;
+            }}
+            onkeypress={(e) => {
+              if (e.key === 'Enter') {
+                isTitleEditing = false;
+                handleChangeTitle();
+              }
+            }}
+          />
+        {/if}
+        {#if !isTitleEditing}
+          <div class="card-header-right">
+            {#if isFloating && otherBoardId}
+              <button
+                type="button"
+                class="btn btn-xs btn-icon"
+                title={$t('node.move_to_other_board')}
+                onclick={() => moveToBoard(otherBoardId)}
+              >
+                {#if currentBoardId === 'Global'}
+                  <ArrowBigDown size={12} />
+                {:else}
+                  <ArrowBigUp size={12} />
+                {/if}
+              </button>
+            {/if}
+            <button
+              type="button"
+              class="btn btn-xs btn-icon"
+              title={$t(floatingButtonTitle)}
+              onclick={toggleFloating}
+            >
+              {#if isFloating}
+                <PictureInPicture size={12} />
+              {:else}
+                <LayoutDashboard size={12} />
+              {/if}
+            </button>
+          </div>
+        {/if}
       </div>
-    {/if}
-  </div>
+    {/snippet}
+  </NodeHeaderMenu>
   {#if !node.collapsed && containsWidgets.length > 0 && containsDrawableWidget}
     <div
       class="widget-stack {nodeStyle}"

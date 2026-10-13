@@ -1,9 +1,11 @@
 <script lang="ts">
   import { SlidersHorizontal } from '@lucide/svelte';
+  import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { saveLayoutObject } from '@/services/gridstack-service';
   import { appState } from '@/states/app-state.svelte';
   import { ComfyGridGroup } from '@/states/model-state.svelte';
+  import type { MenuEntry } from '@/types/menu';
   import { COMFY_NODE_MODE } from '@/types/model-shared';
   import InnerTab from '../common/InnerTab.svelte';
   import InnerTabContainer from '../common/InnerTabContainer.svelte';
@@ -43,6 +45,29 @@
   function handleOptionChanged() {
     saveLayoutObject(workspaceState.layout);
   }
+
+  const displayOptions = [
+    ['commonTabBoard', 'group.toggle_common_tab_board.label'],
+    ['showNoteNodes', 'group.toggle_show_note_nodes.label'],
+    ['showCollapsedNodes', 'group.toggle_show_collapsed_nodes.label'],
+    ['showControlLessNodes', 'group.toggle_show_control_less_nodes.label'],
+    ['showRenderableLessNodes', 'group.toggle_show_renderable_less_nodes.label'],
+  ] as const;
+  const menuItems = $derived.by((): MenuEntry[] => {
+    if (!workspaceState.layout) return [];
+    const items: MenuEntry[] = displayOptions.map(([key, label]) => ({
+      id: key,
+      kind: 'checkbox',
+      label: $t(label),
+      checked: workspaceState.layout[key],
+      onCheckedChange: (checked) => {
+        workspaceState.layout.setDisplayOption(key, checked);
+        handleOptionChanged();
+      },
+    }));
+    items.splice(1, 0, { id: 'separator', kind: 'separator' });
+    return items;
+  });
 
   function getTabClassNames(tabId: string) {
     const classNames: string[] = [];
@@ -119,103 +144,17 @@
                   <option value="name">{$t('group.sort.name')}</option>
                 </select>
 
-                <div class="dropdown">
-                  <button
-                    class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                    ><SlidersHorizontal size={14} />
-                  </button>
-                  <ul class="dropdown-menu dropdown-menu-end">
-                    <li>
-                      <input
-                        type="checkbox"
-                        class="btn-check"
-                        id="toggle-common-tab-board"
-                        name="toggle_common_tab_board"
-                        onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.commonTabBoard}
-                      />
-                      <label
-                        class="dropdown-item"
-                        class:active={workspaceState.layout.commonTabBoard}
-                        for="toggle-common-tab-board"
-                      >
-                        {$t('group.toggle_common_tab_board.label')}
-                      </label>
-                    </li>
-                    <li><hr class="dropdown-divider" /></li>
-                    <li>
-                      <input
-                        type="checkbox"
-                        class="btn-check"
-                        id="toggle-note-nodes"
-                        name="toggle_note_nodes"
-                        onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.showNoteNodes}
-                      />
-                      <label
-                        class="dropdown-item"
-                        class:active={workspaceState.layout.showNoteNodes}
-                        for="toggle-note-nodes"
-                      >
-                        {$t('group.toggle_show_note_nodes.label')}
-                      </label>
-                    </li>
-                    <li>
-                      <input
-                        type="checkbox"
-                        class="btn-check"
-                        id="toggle-collapsed-nodes"
-                        name="toggle_collapsed_nodes"
-                        onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.showCollapsedNodes}
-                      />
-                      <label
-                        class="dropdown-item"
-                        class:active={workspaceState.layout.showCollapsedNodes}
-                        for="toggle-collapsed-nodes"
-                      >
-                        {$t('group.toggle_show_collapsed_nodes.label')}
-                      </label>
-                    </li>
-                    <li>
-                      <input
-                        type="checkbox"
-                        class="btn-check"
-                        id="toggle-controlless-nodes"
-                        name="toggle_controlless_nodes"
-                        onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.showControlLessNodes}
-                      />
-                      <label
-                        class="dropdown-item"
-                        class:active={workspaceState.layout.showControlLessNodes}
-                        for="toggle-controlless-nodes"
-                      >
-                        {$t('group.toggle_show_control_less_nodes.label')}
-                      </label>
-                    </li>
-                    <li>
-                      <input
-                        type="checkbox"
-                        class="btn-check"
-                        id="toggle-renderable-less-nodes"
-                        name="toggle_renderable_less_nodes"
-                        onchange={handleOptionChanged}
-                        bind:checked={workspaceState.layout.showRenderableLessNodes}
-                      />
-                      <label
-                        class="dropdown-item"
-                        class:active={workspaceState.layout.showRenderableLessNodes}
-                        for="toggle-renderable-less-nodes"
-                      >
-                        {$t('group.toggle_show_renderable_less_nodes.label')}
-                      </label>
-                    </li>
-                  </ul>
-                </div>
+                <AppMenu items={menuItems} align="end">
+                  {#snippet trigger({ props })}
+                    <button
+                      {...props}
+                      class="dropdown-toggle btn btn-outline-secondary d-flex justify-content-center align-items-center p-1"
+                      type="button"
+                      aria-label={$t('menu.grid_options')}
+                      ><SlidersHorizontal size={14} />
+                    </button>
+                  {/snippet}
+                </AppMenu>
               </div>
             </div>
             <div class="py-2">

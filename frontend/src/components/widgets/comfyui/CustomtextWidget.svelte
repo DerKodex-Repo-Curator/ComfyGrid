@@ -8,6 +8,7 @@
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
+  import NodeHeaderMenu from '../NodeHeaderMenu.svelte';
   import TextareaCategory from './features/TextareaCategory.svelte';
 
   let {
@@ -355,19 +356,36 @@
     data-name={widget.name}
   >
     <div class="vstack h-100 flex-grow-1 rounded textarea-container">
-      <div
-        class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0 align-items-center"
+      <NodeHeaderMenu
+        node={widget.node}
+        {widget}
+        extraItems={[
+          {
+            id: 'floating',
+            kind: 'action',
+            label: $t(floatingButtonTitle),
+            icon: LayoutDashboard,
+            onSelect: toggleFloating,
+          },
+        ]}
       >
-        <TextareaCategory {widget} onManualTranslate={handleManualTranslate} />
-        <button
-          class="btn btn-xs ms-auto d-flex align-items-center justify-content-center"
-          title={$t(floatingButtonTitle)}
-          style="background: var(--background-fill-primary);"
-          onclick={toggleFloating}
-        >
-          <LayoutDashboard size={14} />
-        </button>
-      </div>
+        {#snippet trigger({ props })}
+          <div
+            {...props}
+            class="d-flex border rounded-top border-bottom-0 bg-light d-flex py-0 ps-3 pe-0 align-items-center"
+          >
+            <TextareaCategory {widget} onManualTranslate={handleManualTranslate} />
+            <button
+              class="btn btn-xs ms-auto d-flex align-items-center justify-content-center"
+              title={$t(floatingButtonTitle)}
+              style="background: var(--background-fill-primary);"
+              onclick={toggleFloating}
+            >
+              <LayoutDashboard size={14} />
+            </button>
+          </div>
+        {/snippet}
+      </NodeHeaderMenu>
       <div class="d-flex flex-grow-1 overflow-y-hidden">
         {@render textarea()}
       </div>

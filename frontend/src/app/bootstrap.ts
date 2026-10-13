@@ -19,7 +19,6 @@ globalThis.bootstrap = bootstrap;
 (globalThis as any).$ = jQuery;
 
 await import('bootstrap-autocomplete');
-await import('bootstrap-contextmenu');
 const litHtml = await import('lit-html');
 const litUnsafeHtml = await import('lit-html/directives/unsafe-html.js');
 globalThis.litHtml = {

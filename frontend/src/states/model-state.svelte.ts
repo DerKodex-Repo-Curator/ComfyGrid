@@ -593,6 +593,16 @@ export class ComfyGridWidget<V = string, O = undefined> {
     }
     set rawValue(rawValue: string | undefined) {
         this.#rawValue = rawValue;
+        if (this.#type === 'customtext' && appState.workspaceState.layout.isTranslateWidget(this.id)) {
+            // Drafts are separate from the source of the last successful translation.
+            const properties = this.#node.comfyNode.properties;
+            if (rawValue === undefined) {
+                if (properties.rawDraftValues) delete properties.rawDraftValues[this.#index];
+            } else {
+                properties.rawDraftValues ??= {};
+                properties.rawDraftValues[this.#index] = rawValue;
+            }
+        }
     }
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };
@@ -625,7 +635,9 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#name = this.#comfyWidget.name;
         this.#type = overrides?.type ?? this.#comfyWidget.type;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
-        this.#rawValue = this.#node.comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
+        const draft = this.#type === 'customtext' ? this.#node.comfyNode.properties.rawDraftValues?.[this.#index] : undefined;
+        this.#rawValue = draft ?? this.#node.comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
+        if (draft !== undefined) this.#isDirty = true;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;
         this.#input = input;
@@ -677,6 +689,10 @@ export class ComfyGridWidget<V = string, O = undefined> {
 
     updateRawValue(payload?: { rawValue?: V }) {
         const rawValue = payload?.rawValue;
+        const drafts = this.#node.comfyNode.properties.rawDraftValues;
+        if (drafts && (rawValue === undefined || drafts[this.#index] === rawValue)) {
+            delete drafts[this.#index];
+        }
 
         if (rawValue === undefined) {
             if (this.#node.comfyNode.properties.rawValues) {

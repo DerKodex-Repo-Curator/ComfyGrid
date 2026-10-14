@@ -83,34 +83,7 @@
     return flattenNodes(groups).filter((entry) => nodeSet.has(entry.node.id));
   });
 
-  const floatingWidgetsInBoard = $derived.by(() => {
-    const result: Array<{
-      group: ComfyGridGroup;
-      node: ComfyGridNode;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      widget: any;
-    }> = [];
-    const allEntries = flattenNodes(workspaceState.groups);
-    const nodeTabMap = workspaceState.nodeTabMap;
-
-    for (const entry of allEntries) {
-      for (const widget of entry.node.widgets) {
-        if (widget.type === 'customtext') {
-          const targetBoard = workspaceState.layout?.floatingWidgets?.get(widget.id);
-          if (!targetBoard) continue;
-
-          if (boardId === 'Global' && targetBoard === 'Global') {
-            result.push({ group: entry.group, node: entry.node, widget });
-          } else if (boardId === 'Tab' && targetBoard === 'Tab') {
-            if (commonTabBoard || (nodeTabMap.get(entry.node.id) ?? '__ungrouped__') === tabId) {
-              result.push({ group: entry.group, node: entry.node, widget });
-            }
-          }
-        }
-      }
-    }
-    return result;
-  });
+  const floatingWidgetsInBoard = $derived(workspaceState.getEffectiveWidgets(boardId, tabId));
 
   function getGSParams(id: string, node: ComfyGridNode) {
     const saved = workspaceState.layout?.floatingPositions?.get(boardId)?.[String(id)];

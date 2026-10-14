@@ -237,8 +237,12 @@ export class ComfyGridNode {
 
     readonly isVisible = $derived.by(() => {
         const isFloating = Boolean(appState.workspaceState.layout.floatingNodes.get(this.id));
-        return isFloating || this.isGroupVisible;
+        return isFloating ? this.isFloatingVisible : this.isGroupVisible;
     });
+
+    get isFloatingVisible(): boolean {
+        return appState.workspaceState.hasErrorNode(this.id) || !this.#collapsed || appState.workspaceState.layout.showCollapsedNodes;
+    }
 
     constructor(comfyNode: ComfyNode, app: ComfyApp) {
         this.#comfyNode = comfyNode;

@@ -27,20 +27,7 @@
 
   const systemMonitor = $derived(optionState.get('ComfyGrid.ui.system_monitor'));
 
-  const hasGlobalFloatingItems = $derived.by(() => {
-    if (!workspaceState.layout) return false;
-    for (const boardId of workspaceState.layout.floatingNodes.values()) {
-      if (boardId === 'Global' || boardId.startsWith('Global-')) {
-        return true;
-      }
-    }
-    for (const boardId of workspaceState.layout.floatingWidgets.values()) {
-      if (boardId === 'Global' || boardId.startsWith('Global-')) {
-        return true;
-      }
-    }
-    return false;
-  });
+  const hasGlobalFloatingItems = $derived(workspaceState.hasEffectiveNodes('Global'));
 
   function handleOptionChanged() {
     saveLayoutObject(workspaceState.layout);

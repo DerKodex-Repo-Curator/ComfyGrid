@@ -4,7 +4,7 @@ import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { appState } from './app-state.svelte';
-import type { ComfyGridGroup, ComfyGridNode } from './model-state.svelte';
+import type { ComfyGridGroup, ComfyGridNode, ComfyGridWidget } from './model-state.svelte';
 
 export class Layout {
     #graphId = $state<string | null>(null);
@@ -482,25 +482,24 @@ class WorkspaceState {
         if (this.getEffectiveNodes(boardTarget, groupId).length > 0) {
             return true;
         }
-        if (boardTarget !== 'Tab') {
-            return false;
-        }
+        return (boardTarget === 'Global' || boardTarget === 'Tab') && this.getEffectiveWidgets(boardTarget, groupId).length > 0;
+    }
+
+    getEffectiveWidgets(boardTarget: BoardId, groupId?: string): Array<{ node: ComfyGridNode; widget: ComfyGridWidget }> {
+        const result: Array<{ node: ComfyGridNode; widget: ComfyGridWidget }> = [];
         const commonTabBoard = this.#layout.commonTabBoard;
         const nodeTabMap = this.nodeTabMap;
-        for (const [widgetId, targetBoard] of this.#layout.floatingWidgets) {
-            if (targetBoard !== 'Tab') {
-                continue;
-            }
-            for (const node of this.#nodes.values()) {
-                if (node.widgets.some((w) => w.id === widgetId && w.type === 'customtext')) {
-                    const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
-                    if (commonTabBoard || groupId === undefined || tabId === groupId) {
-                        return true;
-                    }
+        for (const node of this.#nodes.values()) {
+            if (!node.isFloatingVisible) continue;
+            const tabId = nodeTabMap.get(node.id) ?? '__ungrouped__';
+            if (boardTarget === 'Tab' && !commonTabBoard && groupId !== undefined && tabId !== groupId) continue;
+            for (const widget of node.widgets) {
+                if (widget.type === 'customtext' && this.#layout.floatingWidgets.get(widget.id) === boardTarget) {
+                    result.push({ node, widget });
                 }
             }
         }
-        return false;
+        return result;
     }
 
     hasTabContent(tabId: string): boolean {

@@ -1,9 +1,11 @@
 import { tick } from 'svelte';
+import type { GridItemHTMLElement } from 'gridstack';
 import { get } from 'svelte/store';
 import { t } from '@/i18n/i18n';
 import { callLayoutChangedCallbacks } from '@/services/callback-service';
 import { appState } from '@/states/app-state.svelte';
 import { Layout } from '@/states/workspace-state.svelte';
+import type { BoardId } from '@/types/board';
 import type { FloatingPosition, LayoutType } from '@/types/layout';
 import logger from '@/utils/logger';
 import { waitForDom } from '@/utils/schedule';
@@ -28,6 +30,19 @@ export function gs(node: HTMLElement, { id = '', x, y, w, h }: { id?: string; x?
     return {
         update(newParams: { id?: string; x?: number; y?: number; w?: number; h?: number }) {
             apply(newParams);
+        },
+        destroy() {
+            const item = node as GridItemHTMLElement;
+            const grid = item.gridstackNode?.grid;
+            if (!grid?.engine) return;
+            const wasRestoring = restoringGrids.has(grid);
+            restoringGrids.add(grid);
+            try {
+                // Svelte owns the DOM; GridStack must only release its registration and handlers.
+                grid.removeWidget(item, false, false);
+            } finally {
+                if (!wasRestoring) restoringGrids.delete(grid);
+            }
         },
     };
 }
@@ -162,12 +177,27 @@ export function applyFloatingPositions(boardId?: string, initSettings?: Record<s
         const container = grid.el;
         if (!container) continue;
 
-        const children = Array.from(container.children) as HTMLElement[];
+        const workspace = appState.workspaceState;
+        const groupId = exactGridKey.startsWith('Tab-') ? exactGridKey.slice(4) : '__ungrouped__';
+        const boardTarget = logicalKey as BoardId;
+        const expectedIds = new Set([
+            ...workspace.getEffectiveNodes(boardTarget, groupId).map((node) => node.id),
+            ...workspace.getEffectiveWidgets(boardTarget, groupId).map(({ widget }) => widget.id),
+        ]);
+        const items = (Array.from(container.children) as HTMLElement[]).filter((el) => el.hasAttribute('gs-id'));
+        const children = items.filter((el) => expectedIds.has(el.getAttribute('gs-id')));
         const savedSettings = initSettings?.[logicalKey] ?? appState.workspaceState.layout?.floatingPositions?.get(logicalKey);
         const boardSettings = savedSettings ? structuredClone(savedSettings) : undefined;
 
         restoringGrids.add(grid);
         try {
+            // Repair orphaned frames as well as stale engine entries left by older layouts.
+            for (const item of items) {
+                if (!expectedIds.has(item.getAttribute('gs-id'))) {
+                    grid.removeWidget(item, true, false);
+                    item.remove();
+                }
+            }
             // 1. Temporarily enable float mode to place items at exact saved (x, y) without collision displacement
             grid.float(true);
 

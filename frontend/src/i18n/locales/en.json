@@ -195,6 +195,7 @@
     "toast.free_memory_and_unload_models.completed": "Free memory and unload models completed",
     "toast.update_requested": "Update requested",
     "toast.update_request_completed": "Update completed",
+    "toast.update_request_failed": "Update failed",
     "toast.send_to_input_success": "Sent file to input folder",
     "toast.send_to_input_failed": "Failed to send file to input folder",
     "contextmenu.free_memory": "Free Memory",

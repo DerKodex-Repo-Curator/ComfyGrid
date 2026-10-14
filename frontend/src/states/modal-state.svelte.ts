@@ -6,10 +6,16 @@ class ModalState {
     #selectedModelPath: string = $state();
     #modelDir: ModelTypes = $state();
     #modelSubdirs: string[] = $state();
-    #valueSet: Set<string> | null = $state();
+    #valueSet: ReadonlySet<string> | null | (() => ReadonlySet<string> | null) = $state();
     #handleSelect: (model: Model) => void;
 
-    setup(selectedModelPath: string, modelDir: ModelTypes, modelSubdirs: string[], valueSet: Set<string> | null, onSelect: (model: Model) => void) {
+    setup(
+        selectedModelPath: string,
+        modelDir: ModelTypes,
+        modelSubdirs: string[],
+        valueSet: ReadonlySet<string> | null | (() => ReadonlySet<string> | null),
+        onSelect: (model: Model) => void,
+    ) {
         this.#selectedModelPath = selectedModelPath;
         this.#modelDir = modelDir;
         this.#modelSubdirs = modelSubdirs;
@@ -27,7 +33,7 @@ class ModalState {
         return this.#modelSubdirs;
     }
     get valueSet(): ReadonlySet<string> {
-        return this.#valueSet;
+        return typeof this.#valueSet === 'function' ? this.#valueSet() : this.#valueSet;
     }
     get handleSelect() {
         return this.#handleSelect;
@@ -35,6 +41,7 @@ class ModalState {
 
     clearModelDir() {
         this.#modelDir = null;
+        this.#valueSet = null;
     }
 
     clearCallback() {

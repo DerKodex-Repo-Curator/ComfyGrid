@@ -195,6 +195,7 @@
     "toast.free_memory_and_unload_models.completed": "メモリを解放し、モデルをアンロードしました",
     "toast.update_requested": "更新を要求しました",
     "toast.update_request_completed": "更新が完了しました",
+    "toast.update_request_failed": "更新に失敗しました",
     "toast.send_to_input_success": "Inputフォルダへファイルを転送しました",
     "toast.send_to_input_failed": "Inputフォルダへのファイル転送に失敗しました",
     "contextmenu.free_memory": "メモリの解放",

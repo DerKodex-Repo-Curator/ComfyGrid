@@ -12,6 +12,7 @@
   import OllamaSettingModal from '@/components/modals/OllamaSettingModal.svelte';
   import PaintModal from '@/components/modals/PaintModal.svelte';
   import { loadTranslations, setLanguage } from '@/i18n/i18n';
+  import { workflowManager } from '@/managers/workflow-manager';
   import { BOOTSWATCH_THEME_OPT_KEY, applyBootswatchTheme } from '@/services/bootswatch-service';
   import {
     callOptionsChangedCallbacks,
@@ -21,7 +22,6 @@
   import { loadExtensions } from '@/services/extension-service';
   import { ensureAllModels } from '@/services/models-service';
   import { loadOpts } from '@/services/options-service';
-  import { workflowManager } from '@/managers/workflow-manager';
   import { appState } from '@/states/app-state.svelte';
   import type { DropdownFormInfo } from '@/states/option-state.svelte';
   import logger, { setDebugMode } from '@/utils/logger';

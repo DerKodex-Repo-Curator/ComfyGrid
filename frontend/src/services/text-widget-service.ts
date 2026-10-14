@@ -32,7 +32,10 @@ export async function setTextCategory(widget: ComfyGridWidget, category: TextCat
     } else if (category === 'negative_prompt') {
         if (oldNegative && oldNegative !== widget.id) layout.addPromptWidgetId(oldNegative);
         layout.setNegativePromptWidgetId(widget.id);
-    } else if (category === 'translate') layout.addTranslateWidgetId(widget.id);
+    } else if (category === 'translate') {
+        layout.addTranslateWidgetId(widget.id);
+        widget.initializeRawValue();
+    }
     saveLayoutObject(layout);
     await tick();
     callLayoutChangedCallbacks();

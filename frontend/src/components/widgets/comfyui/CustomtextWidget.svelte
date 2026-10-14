@@ -34,6 +34,14 @@
   );
   const isPromptGroup = $derived(isPrompt || isPositivePrompt || isNegativePrompt);
 
+  function getRawInputValue(): string {
+    return widget.rawValue ?? widget.value ?? '';
+  }
+
+  function setRawInputValue(value: string) {
+    widget.rawValue = value;
+  }
+
   let activeTranslationText = '';
   let activeTranslationPromise: Promise<void> | null = null;
   let activeTranslationRequestId = 0;
@@ -150,7 +158,7 @@
 
   function registerOrUnregisterPending(retryFailed = false) {
     const timing = appState.optionState.get('ComfyGrid.ollama.translate_timing') ?? 'on_generate';
-    const text = widget.rawValue ?? widget.value ?? '';
+    const text = getRawInputValue();
     const translatedInput = widget.node.comfyNode.properties.rawValues?.[widget.index];
     if (isTranslate && text.trim() !== '' && translatedInput !== text) {
       widget.isDirty = true;
@@ -205,9 +213,7 @@
   );
 
   function handleManualTranslate() {
-    const raw = widget.rawValue;
-    const val = widget.value;
-    const text = raw ?? val ?? '';
+    const text = getRawInputValue();
     if (text.trim()) {
       widget.isDirty = true;
       triggerTranslation(text);
@@ -224,8 +230,7 @@
       }
       registerOrUnregisterPending();
     } else {
-      widget.rawValue = widget.value;
-      widget.updateRawValue();
+      widget.invalidateTranslation();
       widget.updateValue();
     }
   }
@@ -239,15 +244,14 @@
   }
 
   $effect(() => {
+    const currentWidget = widget;
+    if (isTranslate) untrack(() => currentWidget.initializeRawValue());
+  });
+
+  $effect(() => {
     if (isTranslate) {
-      if (widget.rawValue === undefined || widget.rawValue === null) {
-        widget.rawValue = widget.value ?? '';
-      }
       registerOrUnregisterPending();
     } else {
-      if (widget.rawValue !== undefined && widget.rawValue === widget.value) {
-        widget.rawValue = undefined;
-      }
       widget.translationFailed = false;
       translationManager.unregister(widget.id);
     }
@@ -298,9 +302,7 @@
   $effect(() => {
     widget.textarea = textareaElement;
     widget.triggerTranslation = (t?: string) => {
-      const raw = widget.rawValue;
-      const val = widget.value;
-      const text = t ?? (raw && raw.trim() ? raw : val) ?? '';
+      const text = t ?? getRawInputValue();
       widget.isDirty = true;
       return triggerTranslation(text);
     };
@@ -313,7 +315,7 @@
       rows={options.isFloating ? 1 : 6}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
-      bind:value={widget.rawValue}
+      bind:value={getRawInputValue, setRawInputValue}
       enablePromptPilot={false}
       oninput={handleInput}
       onblur={handleBlur}
@@ -338,7 +340,7 @@
       style:min-height={options.isFloating ? '0' : undefined}
       readonly={widget.readonly}
       placeholder={widget.placeholder}
-      bind:value={widget.rawValue}
+      bind:value={getRawInputValue, setRawInputValue}
       bind:this={textareaElement}></textarea>
   {:else}
     <textarea

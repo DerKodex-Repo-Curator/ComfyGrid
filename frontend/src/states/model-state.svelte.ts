@@ -491,7 +491,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
     #name: string = $state();
     #type: string = $state();
     #value: V = $state();
-    #rawValue: string = $state();
+    #rawValue: string | undefined = $state();
     #image: ImageInfo = $state({ filename: '', subfolder: '', type: '' });
     #element: HTMLElement | null = $state();
     #input: { id: string; slot: string } | null = $state();
@@ -598,15 +598,26 @@ export class ComfyGridWidget<V = string, O = undefined> {
     set rawValue(rawValue: string | undefined) {
         this.#rawValue = rawValue;
         if (this.#type === 'customtext' && appState.workspaceState.layout.isTranslateWidget(this.id)) {
-            // Drafts are separate from the source of the last successful translation.
-            const properties = this.#node.comfyNode.properties;
-            if (rawValue === undefined) {
-                if (properties.rawDraftValues) delete properties.rawDraftValues[this.#index];
-            } else {
-                properties.rawDraftValues ??= {};
-                properties.rawDraftValues[this.#index] = rawValue;
-            }
+            this.#rawValue = rawValue ?? '';
+            this.#saveRawDraft();
         }
+    }
+
+    #saveRawDraft() {
+        const properties = this.#node.comfyNode.properties;
+        properties.rawDraftValues ??= {};
+        properties.rawDraftValues[this.#index] = this.#rawValue ?? '';
+    }
+
+    initializeRawValue() {
+        if (this.#type === 'customtext' && (this.#rawValue == null || this.#rawValue === '')) {
+            this.rawValue = (this.#value as string) ?? '';
+        }
+    }
+
+    invalidateTranslation() {
+        this.#isDirty = true;
+        if (this.#type === 'customtext' && this.#rawValue != null) this.#saveRawDraft();
     }
     set image(image: ImageInfo) {
         this.#image = { filename: '', subfolder: '', type: '', ...image };
@@ -640,7 +651,7 @@ export class ComfyGridWidget<V = string, O = undefined> {
         this.#type = overrides?.type ?? this.#comfyWidget.type;
         this.#value = (typeof this.#comfyWidget.value === 'object' ? safeClone(this.#comfyWidget.value) : this.#comfyWidget.value) as V;
         const draft = this.#type === 'customtext' ? this.#node.comfyNode.properties.rawDraftValues?.[this.#index] : undefined;
-        this.#rawValue = draft ?? this.#node.comfyNode.properties.rawValues?.[this.#index] ?? this.#value;
+        this.#rawValue = draft ?? this.#node.comfyNode.properties.rawValues?.[this.#index] ?? (this.#type === 'customtext' ? undefined : this.#value);
         if (draft !== undefined) this.#isDirty = true;
         this.#image = image ? { filename: '', subfolder: '', type: '', ...image } : { filename: '', subfolder: '', type: '' };
         this.#element = this.#comfyWidget.inputEl || this.#comfyWidget.element || null;

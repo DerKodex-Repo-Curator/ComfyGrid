@@ -425,8 +425,8 @@ export class ComfyGridNode {
         this.#comfyNode.title = title;
     }
     set collapsed(collapsed: boolean) {
+        this.#comfyNode.flags.collapsed = collapsed;
         this.#collapsed = collapsed;
-        this.#comfyNode.collapsed = collapsed;
     }
     set mode(mode: ComfyNodeMode) {
         this.#mode = mode;

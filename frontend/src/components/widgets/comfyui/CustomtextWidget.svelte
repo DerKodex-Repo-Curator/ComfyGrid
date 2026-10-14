@@ -8,7 +8,9 @@
   import { translationManager } from '@/services/translation-service.svelte';
   import { appState } from '@/states/app-state.svelte';
   import type { ComfyGridWidget } from '@/states/model-state.svelte';
+  import type { BoardId } from '@/types/board';
   import NodeHeaderMenu from '../NodeHeaderMenu.svelte';
+  import { createGridStackMoveMenu } from '../node-layout-menu';
   import TextareaCategory from './features/TextareaCategory.svelte';
 
   let {
@@ -288,6 +290,11 @@
     await updateBoardFloatingState();
   }
 
+  async function moveToBoard(boardId: BoardId) {
+    layout.setFloatingWidgets(widget.id, boardId);
+    await updateBoardFloatingState(widget.id);
+  }
+
   $effect(() => {
     widget.textarea = textareaElement;
     widget.triggerTranslation = (t?: string) => {
@@ -359,15 +366,7 @@
       <NodeHeaderMenu
         node={widget.node}
         {widget}
-        extraItems={[
-          {
-            id: 'floating',
-            kind: 'action',
-            label: $t(floatingButtonTitle),
-            icon: LayoutDashboard,
-            onSelect: toggleFloating,
-          },
-        ]}
+        extraItems={[createGridStackMoveMenu($t, moveToBoard)]}
       >
         {#snippet trigger({ props })}
           <div

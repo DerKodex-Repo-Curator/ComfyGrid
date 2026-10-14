@@ -20,6 +20,7 @@
   import NodeModeSelector from './comfyui/features/NodeModeSelector.svelte';
   import TextareaCategory from './comfyui/features/TextareaCategory.svelte';
   import { getWidgetComponentWithMeta } from './comfyui/registry/widget-registry';
+  import { createGridStackMoveMenu } from './node-layout-menu';
 
   let { node, widget }: { node: ComfyGridNode; widget?: ComfyGridWidget } = $props();
 
@@ -252,13 +253,15 @@
 
   const layoutMenuItems = $derived.by((): MenuEntry[] => {
     const items: MenuEntry[] = [
-      {
-        id: 'floating',
-        kind: 'action',
-        label: $t(floatingButtonTitle),
-        icon: isFloating ? PictureInPicture : LayoutDashboard,
-        onSelect: toggleFloating,
-      },
+      isFloating
+        ? {
+            id: 'floating',
+            kind: 'action',
+            label: $t(floatingButtonTitle),
+            icon: PictureInPicture,
+            onSelect: toggleFloating,
+          }
+        : createGridStackMoveMenu($t, moveToBoard),
     ];
     if (isFloating && otherBoardId)
       items.push({

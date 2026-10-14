@@ -1,9 +1,21 @@
 <script lang="ts">
-  import { CopyPlus, Info, Languages, Locate, Play, RedoDot, Settings } from '@lucide/svelte';
+  import {
+    ChevronDown,
+    ChevronUp,
+    CopyPlus,
+    Info,
+    Languages,
+    Locate,
+    Play,
+    RedoDot,
+    Settings,
+    Trash2,
+  } from '@lucide/svelte';
   import { NodeDuplicationError, getNodeDuplicationIssue } from '@/bridge/node-duplication';
   import AppMenu from '@/components/common/AppMenu.svelte';
   import { t } from '@/i18n/i18n';
   import { nodeDuplicationManager } from '@/managers/node-duplication-manager';
+  import { nodeRemovalManager } from '@/managers/node-removal-manager';
   import {
     TEXT_CATEGORIES,
     type TextCategory,
@@ -31,6 +43,7 @@
     disabled?: boolean;
   } = $props();
   let isDuplicating = $state(false);
+  let isDeleting = $state(false);
   let duplicationIssue = $state<ReturnType<typeof getNodeDuplicationIssue>>();
   const textWidget = $derived(
     widget?.type === 'customtext'
@@ -56,6 +69,28 @@
 
   function handleMenuOpen(open: boolean) {
     if (open) duplicationIssue = getNodeDuplicationIssue(node.comfyNode);
+  }
+
+  async function deleteNode() {
+    if (isDeleting || !confirm($t('node.menu.delete_confirm'))) return;
+    isDeleting = true;
+    try {
+      await nodeRemovalManager.deleteNode(node);
+    } catch (error) {
+      logger.error('Failed to delete node:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('node.menu.delete_failed') });
+    } finally {
+      isDeleting = false;
+    }
+  }
+
+  function toggleCollapsed() {
+    try {
+      appState.bridge?.toggleNodeCollapsed({ nodeId: node.id });
+    } catch (error) {
+      logger.error('Failed to collapse node:', error);
+      appState.toastState.addToast({ type: 'error', message: $t('node.menu.collapse_failed') });
+    }
   }
 
   const items = $derived.by((): MenuEntry[] => {
@@ -160,7 +195,8 @@
     }
     if (extraItems.length)
       result.push({ id: 'layout-separator', kind: 'separator' }, ...extraItems);
-    if (!widget && appState.isDebugMode)
+    if (!widget && appState.isDebugMode) {
+      result.push({ id: 'info-separator', kind: 'separator' });
       result.push({
         id: 'info',
         kind: 'action',
@@ -187,6 +223,29 @@
           });
         },
       });
+    }
+    if (!widget) {
+      result.push(
+        { id: 'node-actions-separator', kind: 'separator' },
+        {
+          id: 'collapse',
+          kind: 'action',
+          label: $t(node.collapsed ? 'node.menu.expand' : 'node.menu.collapse'),
+          icon: node.collapsed ? ChevronDown : ChevronUp,
+          disabled: !appState.bridge,
+          onSelect: toggleCollapsed,
+        },
+        {
+          id: 'delete',
+          kind: 'action',
+          label: $t('node.menu.delete'),
+          icon: Trash2,
+          danger: true,
+          disabled: isDeleting || !appState.bridge,
+          onSelect: deleteNode,
+        },
+      );
+    }
     return result;
   });
 </script>

@@ -48,6 +48,38 @@ export class ComfyUiBridge {
         return duplicateNodeAfter(source);
     }
 
+    toggleNodeCollapsed(payload: { nodeId: string }): void {
+        const node = appState.workspaceState.getRealNode(payload.nodeId);
+        const source = node?.comfyNode;
+        const graph = source?.graph;
+        if (!node || !source || !graph || graph.getNodeById(source.id) !== source) throw new Error('Node is no longer available');
+        graph.beforeChange(source);
+        try {
+            source.collapse(false);
+            node.collapsed = Boolean(source.flags.collapsed ?? source.collapsed);
+        } finally {
+            graph.afterChange(source);
+            graph.setDirtyCanvas(true, true);
+        }
+    }
+
+    deleteNode(payload: { nodeId: string }): void {
+        const source = appState.workspaceState.getRealNode(payload.nodeId)?.comfyNode;
+        const graph = source?.graph;
+        if (!source || !graph || graph.getNodeById(source.id) !== source) throw new Error('Node is no longer available');
+        if (source.block_delete || source.ignore_remove) throw new Error('Node cannot be deleted');
+        graph.beforeChange(source);
+        try {
+            // Match ComfyUI's canvas deletion; let the native method decide how to reconnect.
+            source.connectInputToOutput?.();
+            graph.remove(source);
+            if (graph.getNodeById(source.id) === source) throw new Error('Node cannot be deleted');
+        } finally {
+            graph.afterChange(source);
+            graph.setDirtyCanvas(true, true);
+        }
+    }
+
     /**
      * Get list of all workflow tab items in ComfyUI.
      */

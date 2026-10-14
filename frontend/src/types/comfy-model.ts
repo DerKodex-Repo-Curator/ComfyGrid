@@ -58,8 +58,11 @@ export interface ComfyGroup extends LGraphGroup {
 }
 
 export interface ComfyNode extends LGraphNode {
+    block_delete?: boolean;
+    ignore_remove?: boolean;
+    connectInputToOutput?: () => boolean | undefined;
     boundingRect: number[];
-    collapsed: boolean;
+    readonly collapsed: boolean;
     widgets: ComfyWidget[];
     inputs: ComfyInputNodeSlot[];
     images?: ImageInfo[];
